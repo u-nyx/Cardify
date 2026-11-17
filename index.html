@@ -12,7 +12,6 @@
       --bg-color: #090b10;
       --bg-glow-1: rgba(56, 189, 248, 0.14);
       --bg-glow-2: rgba(168, 85, 247, 0.14);
-      --dot-color: rgba(148, 163, 184, 0.22);
       --card-bg: linear-gradient(155deg, rgba(22, 27, 38, 0.96), rgba(13, 16, 24, 0.98));
       --card-border: rgba(255, 255, 255, 0.12);
       --card-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
@@ -49,18 +48,47 @@
       touch-action: none;
     }
 
-    /* พื้นหลัง: dot matrix + แสงฟุ้งสองจุด (ใช้ gradient ล้วน ไม่มี canvas) */
+    /* แสงฟุ้งพื้นหลัง */
     .ambient-bg {
       position: fixed;
       inset: 0;
       background-image:
         radial-gradient(circle at 25% 20%, var(--bg-glow-1), transparent 45%),
-        radial-gradient(circle at 75% 80%, var(--bg-glow-2), transparent 45%),
-        radial-gradient(var(--dot-color) 1.2px, transparent 1.4px);
-      background-size: 100% 100%, 100% 100%, 26px 26px;
-      background-position: 0 0, 0 0, 13px 13px;
+        radial-gradient(circle at 75% 80%, var(--bg-glow-2), transparent 45%);
       pointer-events: none;
       z-index: 0;
+    }
+
+    /* พื้นหลังจุดที่เลื่อนและเปลี่ยนสี */
+    @property --dot-h {
+      syntax: '<number>';
+      inherits: true;
+      initial-value: 200;
+    }
+
+    .dot-layer {
+      position: fixed;
+      inset: -26px;
+      background-image: radial-gradient(
+        circle,
+        hsla(var(--dot-h), 85%, 70%, 0.45) 1.2px,
+        transparent 1.6px
+      );
+      background-size: 26px 26px;
+      pointer-events: none;
+      z-index: 0;
+      will-change: transform;
+      animation: dotDrift 14s linear infinite, dotHue 12s linear infinite;
+    }
+
+    @keyframes dotDrift {
+      from { transform: translate3d(0, 0, 0); }
+      to   { transform: translate3d(26px, 26px, 0); }
+    }
+
+    @keyframes dotHue {
+      from { --dot-h: 0; }
+      to   { --dot-h: 360; }
     }
 
     #lanyard-svg {
@@ -166,7 +194,7 @@
       transform: translateZ(0);
       transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    
+
     .card-flipper.flipped {
       transform: rotateY(180deg) translateZ(0);
     }
@@ -193,44 +221,6 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-    }
-
-    /* Animated background particles for back card */
-    .back-particles {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    .particle {
-      position: absolute;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-      opacity: 0.9;
-      animation: floatParticle 5s ease-in-out infinite, colorShift 6s linear infinite;
-    }
-
-    .particle:nth-child(1) { top: 15%; left: 20%; animation-delay: 0s, 0s; }
-    .particle:nth-child(2) { top: 65%; left: 75%; animation-delay: 1s, 1.5s; width: 8px; height: 8px; }
-    .particle:nth-child(3) { top: 35%; left: 80%; animation-delay: 2s, 3s; width: 5px; height: 5px; }
-    .particle:nth-child(4) { top: 75%; left: 20%; animation-delay: 1.5s, 0.5s; width: 7px; height: 7px; }
-    .particle:nth-child(5) { top: 20%; left: 70%; animation-delay: 3s, 2s; width: 5px; height: 5px; }
-    .particle:nth-child(6) { top: 50%; left: 15%; animation-delay: 2.2s, 4s; width: 7px; height: 7px; }
-
-    @keyframes floatParticle {
-      0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.4; }
-      50% { transform: translateY(-20px) translateX(15px); opacity: 1; }
-    }
-
-    @keyframes colorShift {
-      0% { background-color: #38bdf8; box-shadow: 0 0 12px #38bdf8; }
-      33% { background-color: #a855f7; box-shadow: 0 0 12px #a855f7; }
-      66% { background-color: #6aeb16; box-shadow: 0 0 12px #6aeb16; }
-      100% { background-color: #38bdf8; box-shadow: 0 0 12px #38bdf8; }
     }
 
     .back-content {
@@ -547,6 +537,7 @@
 </head>
 <body>
   <div class="ambient-bg"></div>
+  <div class="dot-layer"></div>
 
   <!-- Lanyard SVG Straps -->
   <svg id="lanyard-svg">
@@ -666,15 +657,6 @@
 
         <!-- BACK SIDE -->
         <article class="id-card card-back">
-          <div class="back-particles">
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-          </div>
-
           <div class="card-slot-cutout"></div>
 
           <div class="card-meta">
@@ -742,7 +724,6 @@
       let hasDragged = false;
       let isFlipped = false;
 
-      // ตัวจับการแตะ: นับเฉพาะการแตะที่ไม่ได้ลาก
       let lastTapTime = 0;
       const DOUBLE_TAP_MS = 350;
 
@@ -822,7 +803,7 @@
         target.x = viewportW / 2;
         target.y = getRestTop();
 
-        // แตะโดยไม่ได้ลาก: ถ้าเป็นการแตะสองครั้งภายในเวลาที่กำหนดจึงพลิก
+        // แตะโดยไม่ได้ลาก: แตะสองครั้งภายในเวลาที่กำหนดจึงพลิก
         if (!hasDragged) {
           const now = performance.now();
           if (now - lastTapTime < DOUBLE_TAP_MS) {
