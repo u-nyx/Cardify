@@ -157,18 +157,18 @@
       border-radius: 0 0 6px 6px;
     }
 
-    /* Card Flipper Container */
     .card-flipper {
       position: relative;
       width: 100%;
       height: 480px;
       transform-style: preserve-3d;
       will-change: transform;
+      transform: translateZ(0);
       transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-
+    
     .card-flipper.flipped {
-      transform: rotateY(180deg);
+      transform: rotateY(180deg) translateZ(0);
     }
 
     .id-card {
@@ -745,8 +745,6 @@
       // ตัวจับการแตะ: นับเฉพาะการแตะที่ไม่ได้ลาก
       let lastTapTime = 0;
       const DOUBLE_TAP_MS = 350;
-
-      cardFlipper.style.transform = 'translateZ(0)';
 
       const FIXED_DT = 1 / 120;
       const stiffness = 135;
