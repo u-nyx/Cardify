@@ -12,6 +12,7 @@
       --bg-color: #090b10;
       --bg-glow-1: rgba(56, 189, 248, 0.14);
       --bg-glow-2: rgba(168, 85, 247, 0.14);
+      --dot-color: rgba(148, 163, 184, 0.22);
       --card-bg: linear-gradient(155deg, rgba(22, 27, 38, 0.96), rgba(13, 16, 24, 0.98));
       --card-border: rgba(255, 255, 255, 0.12);
       --card-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
@@ -48,12 +49,16 @@
       touch-action: none;
     }
 
+    /* พื้นหลัง: dot matrix + แสงฟุ้งสองจุด (ใช้ gradient ล้วน ไม่มี canvas) */
     .ambient-bg {
       position: fixed;
       inset: 0;
       background-image:
         radial-gradient(circle at 25% 20%, var(--bg-glow-1), transparent 45%),
-        radial-gradient(circle at 75% 80%, var(--bg-glow-2), transparent 45%);
+        radial-gradient(circle at 75% 80%, var(--bg-glow-2), transparent 45%),
+        radial-gradient(var(--dot-color) 1.2px, transparent 1.4px);
+      background-size: 100% 100%, 100% 100%, 26px 26px;
+      background-position: 0 0, 0 0, 13px 13px;
       pointer-events: none;
       z-index: 0;
     }
@@ -567,7 +572,7 @@
       </div>
 
       <div class="card-flipper" id="card-flipper">
-        
+
         <!-- FRONT SIDE -->
         <article class="id-card" id="id-card">
           <div class="holo-foil" id="holo-foil"></div>
@@ -661,7 +666,6 @@
 
         <!-- BACK SIDE -->
         <article class="id-card card-back">
-          <!-- Background Moving Particles with Color Shift -->
           <div class="back-particles">
             <div class="particle"></div>
             <div class="particle"></div>
@@ -691,7 +695,7 @@
               </svg>
             </div>
             <h2 class="back-title">Scan for Quick Link</h2>
-            <p class="back-desc">คลิกหรือแตะที่การ์ดเพื่อพลิกกลับด้านหน้า หรือสแกนเพื่อเข้าสู่ลิงก์โปรไฟล์หลัก</p>
+            <p class="back-desc">กดสองครั้งหรือแตะที่การ์ดเพื่อพลิกกลับด้านหน้า หรือสแกนเพื่อเข้าสู่ลิงก์โปรไฟล์หลัก</p>
           </div>
 
           <div class="card-footer">
@@ -715,7 +719,6 @@
 
       const strapFrontOuter = document.getElementById('strap-front-outer');
       const strapFrontBase = document.getElementById('strap-front-base');
-
       const strapBackOuter = document.getElementById('strap-back-outer');
       const strapBackBase = document.getElementById('strap-back-base');
 
@@ -739,7 +742,10 @@
       let hasDragged = false;
       let isFlipped = false;
 
-      // Force initial GPU hardware acceleration to avoid first-flip stutter
+      // ตัวจับการแตะ: นับเฉพาะการแตะที่ไม่ได้ลาก
+      let lastTapTime = 0;
+      const DOUBLE_TAP_MS = 350;
+
       cardFlipper.style.transform = 'translateZ(0)';
 
       const FIXED_DT = 1 / 120;
@@ -761,12 +767,17 @@
       };
       window.addEventListener('resize', updateMetrics, { passive: true });
 
+      function toggleFlip() {
+        isFlipped = !isFlipped;
+        cardFlipper.classList.toggle('flipped', isFlipped);
+      }
+
       const onPointerDown = (e) => {
         if (e.target.closest('button') || e.target.closest('a')) return;
-        
+
         isDragging = true;
         hasDragged = false;
-        
+
         cardWrapper.setPointerCapture?.(e.pointerId);
         dragOffset.x = e.clientX - pos.x;
         dragOffset.y = e.clientY - pos.y;
@@ -780,7 +791,7 @@
         const clientY = e.clientY;
 
         if (isDragging) {
-          if (Math.hypot(clientX - lastPointer.x, clientY - lastPointer.y) > 3) {
+          if (Math.hypot(clientX - lastPointer.x, clientY - lastPointer.y) > 6) {
             hasDragged = true;
           }
           const nextX = clientX - dragOffset.x;
@@ -813,13 +824,14 @@
         target.x = viewportW / 2;
         target.y = getRestTop();
 
-        // ถ้าไม่ได้ลากการ์ด ให้ถือเป็นการคลิก/แตะเพื่อพลิกการ์ดทันที
+        // แตะโดยไม่ได้ลาก: ถ้าเป็นการแตะสองครั้งภายในเวลาที่กำหนดจึงพลิก
         if (!hasDragged) {
-          isFlipped = !isFlipped;
-          if (isFlipped) {
-            cardFlipper.classList.add('flipped');
+          const now = performance.now();
+          if (now - lastTapTime < DOUBLE_TAP_MS) {
+            toggleFlip();
+            lastTapTime = 0;
           } else {
-            cardFlipper.classList.remove('flipped');
+            lastTapTime = now;
           }
         }
       };
@@ -966,21 +978,18 @@
       }
 
       document.getElementById('copy-email-btn').addEventListener('click', () => {
-        if (hasDragged) return;
         const email = document.getElementById('display-email').textContent;
         navigator.clipboard?.writeText(email);
         showToast(`คัดลอกอีเมล ${email} แล้ว`);
       });
 
       document.getElementById('copy-discord-btn').addEventListener('click', () => {
-        if (hasDragged) return;
         const discord = document.getElementById('display-discord').textContent;
         navigator.clipboard?.writeText(discord);
         showToast(`คัดลอก Discord ${discord} แล้ว`);
       });
 
       document.getElementById('copy-instagram-btn').addEventListener('click', () => {
-        if (hasDragged) return;
         const instagram = document.getElementById('display-instagram').textContent;
         navigator.clipboard?.writeText(instagram);
         showToast(`คัดลอก Instagram ${instagram} แล้ว`);
