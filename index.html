@@ -533,6 +533,24 @@
         width: 312px;
       }
     }
+  
+    /* ---- แถบเครื่องมือ, ป๊อปอัป และข้อความแจ้งของหน้าการ์ด ---- */
+    .cbfm-bar { position: fixed; top: 14px; right: 14px; z-index: 60; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 28px); }
+    .cbfm-btn { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 12.5px; font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--card-border); background: rgba(22, 27, 38, 0.92); color: var(--text-primary); cursor: pointer; user-select: none; }
+    .cbfm-btn:hover { border-color: var(--accent); }
+    .cbfm-btn.primary { background: #3b62d8; border-color: #3b62d8; color: #fff; }
+    .cbfm-btn:disabled { opacity: 0.5; cursor: default; }
+    .cbfm-hidden { display: none !important; }
+    .cbfm-notice { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; max-width: 90vw; padding: 10px 18px; border-radius: 999px; background: rgba(15, 17, 23, 0.85); border: 1px solid var(--card-border); color: var(--text-secondary); font-size: 13px; text-align: center; pointer-events: none; user-select: text; }
+    .cbfm-modal { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.6); touch-action: auto; user-select: text; }
+    .cbfm-form { width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto; background: rgba(18, 22, 32, 0.98); border: 1px solid var(--card-border); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+    .cbfm-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+    .cbfm-form input, .cbfm-form textarea { font-family: inherit; font-size: 13px; color: var(--text-primary); background: #0d1017; border: 1px solid var(--card-border); border-radius: 10px; padding: 8px 10px; }
+    .cbfm-form .check { flex-direction: row; align-items: center; gap: 8px; color: var(--text-primary); }
+    .cbfm-form .row { display: flex; justify-content: flex-end; gap: 8px; }
+    .cbfm-msg { min-height: 16px; font-size: 12px; color: #f87171; }
+    .cbfm-share { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary); max-width: 90vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cbfm-chip { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 4px 9px; border-radius: 8px; background: var(--tag-bg); border: 1px solid var(--tag-border); color: var(--text-primary); }
   </style>
 </head>
 <body>
@@ -583,7 +601,7 @@
             <div class="avatar-wrap">
               <img
                 class="avatar-img"
-                src="pfuser.png"
+                src="pfuser.jpg"
                 alt="Profile Avatar"
               />
               <span class="verified-tick" title="Verified">
@@ -975,6 +993,254 @@
       });
 
     })();
+  </script>
+
+  <div class="cbfm-bar">
+    <button class="cbfm-btn" id="cbfmLoginBtn" type="button">เข้าสู่ระบบ Google</button>
+    <button class="cbfm-btn" id="cbfmLogoutBtn" type="button" hidden>ออกจากระบบ</button>
+    <button class="cbfm-btn primary cbfm-hidden" id="cbfmEditBtn" type="button">แก้ไขการ์ด</button>
+    <button class="cbfm-btn" id="cbfmShareBtn" type="button" hidden>คัดลอกลิงก์การ์ด</button>
+  </div>
+  <div class="cbfm-share cbfm-hidden" id="cbfmShareUrl"></div>
+  <div class="cbfm-notice cbfm-hidden" id="cbfmNotice"><div id="cbfmNoticeText"></div></div>
+
+  <div class="cbfm-modal cbfm-hidden" id="cbfmModal">
+    <form class="cbfm-form" id="cbfmForm" onsubmit="return false">
+      <label>ชื่อที่แสดง<input id="cbfmInName" maxlength="60"/></label>
+      <label>ลิงก์การ์ด (ตัวอักษรอังกฤษ ตัวเลข และ - เท่านั้น)<input id="cbfmInSlug" maxlength="40" placeholder="เช่น essencx"/></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <label>Handle<input id="cbfmInHandle" maxlength="40"/></label>
+        <label>บทบาท<input id="cbfmInRole" maxlength="60"/></label>
+      </div>
+      <label>คำอธิบายสั้น<textarea id="cbfmInBio" rows="2" maxlength="240"></textarea></label>
+      <label>แท็ก (คั่นด้วยเครื่องหมายจุลภาค)<input id="cbfmInTags" maxlength="200"/></label>
+      <label>อีเมลติดต่อ<input id="cbfmInContact" maxlength="120"/></label>
+      <label>Discord<input id="cbfmInDiscord" maxlength="60"/></label>
+      <label>Instagram<input id="cbfmInInsta" maxlength="60"/></label>
+      <label class="check"><input type="checkbox" id="cbfmInPublic"/> เปิดให้ทุกคนดูการ์ดนี้ (ใช้แชร์ลิงก์ได้)</label>
+      <div class="cbfm-msg" id="cbfmMsg"></div>
+      <div class="row">
+        <button class="cbfm-btn" id="cbfmCancelBtn" type="button">ยกเลิก</button>
+        <button class="cbfm-btn primary" id="cbfmSaveBtn" type="button">บันทึก</button>
+      </div>
+    </form>
+  </div>
+
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+      from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCLhvHij49dsfmmdKFOB4tYMxC1F4r7oxs",
+      authDomain: "fen-board.firebaseapp.com",
+      projectId: "fen-board",
+      appId: "1:1002777913125:web:9e32ce19faa76e3bf21ccc",
+    };
+    const SUPABASE_URL = "https://qxatfxjaemqumxhgqlgu.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_kFK1TySyqbOldG1X2FcijA_aFi9Udpk";
+
+    const fbAuth = getAuth(initializeApp(FIREBASE_CONFIG));
+    let user = null;
+    const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      accessToken: async () => (user ? user.getIdToken() : null),
+    });
+
+    const $ = (id) => document.getElementById(id);
+    const params = new URLSearchParams(location.search);
+    let slug = (params.get("h") || "").toLowerCase();
+    let row = null;
+    let isOwner = false;
+    const SLUG_RE = /^[a-z0-9-]{3,40}$/;
+
+    function setText(sel, text) {
+      const el = document.querySelector(sel);
+      if (el) el.textContent = text;
+    }
+
+    function renderCard(d) {
+      setText(".profile-info h1", d.name || "-");
+      setText(".profile-handle", d.handle ? "@" + String(d.handle).replace(/^@/, "") : "");
+      setText(".profile-role", d.role || "");
+      setText(".bio-text", d.bio || "");
+      const tags = document.querySelector(".tags-row");
+      tags.replaceChildren();
+      (d.tags || []).forEach((t) => {
+        const span = document.createElement("span");
+        span.className = "tag";
+        span.textContent = t;
+        tags.appendChild(span);
+      });
+      $("display-email").textContent = d.contact_email || "ยังไม่ระบุ";
+      $("display-discord").textContent = d.discord || "ยังไม่ระบุ";
+      $("display-instagram").textContent = d.instagram || "ยังไม่ระบุ";
+      const img = document.querySelector(".avatar-img");
+      if (d.avatar_url) img.src = d.avatar_url;
+    }
+
+    function showNotice(text) {
+      $("cbfmNoticeText").textContent = text;
+      $("cbfmNotice").classList.remove("cbfm-hidden");
+    }
+    function hideNotice() {
+      $("cbfmNotice").classList.add("cbfm-hidden");
+    }
+
+    function shareUrl() {
+      return location.origin + location.pathname + "?h=" + encodeURIComponent(slug);
+    }
+
+    function updateShareUi() {
+      const share = $("cbfmShareUrl");
+      if (slug) {
+        share.textContent = shareUrl();
+        share.classList.remove("cbfm-hidden");
+        $("cbfmShareBtn").hidden = false;
+      } else {
+        share.classList.add("cbfm-hidden");
+        $("cbfmShareBtn").hidden = true;
+      }
+    }
+
+    async function loadBySlug() {
+      if (!slug) return null;
+      const { data } = await sb.from("member_cards").select("*").eq("slug", slug).maybeSingle();
+      return data || null;
+    }
+
+    async function loadOwnRow() {
+      if (!user || !user.email) return null;
+      const { data } = await sb.from("member_cards").select("*")
+        .eq("email", user.email.toLowerCase()).maybeSingle();
+      return data || null;
+    }
+
+    async function refresh() {
+      let data = await loadBySlug();
+      if (!data && !slug && user) {
+        // เจ้าของที่ยังไม่ได้ระบุลิงก์ ให้ดึงการ์ดของตัวเอง
+        data = await loadOwnRow();
+        if (data) {
+          slug = data.slug || "";
+          history.replaceState(null, "", location.pathname + (slug ? "?h=" + encodeURIComponent(slug) : ""));
+        }
+      }
+      isOwner = !!(user && user.email && data && data.email === user.email.toLowerCase());
+      if (!data) {
+        if (isOwner || (!slug && user)) {
+          // ยังไม่มีการ์ด ให้เจ้าของเปิดฟอร์มสร้างการ์ด
+          row = null;
+          hideNotice();
+          openEditor(true);
+        } else {
+          showNotice(slug ? "ไม่พบการ์ดนี้" : "ระบุลิงก์การ์ด หรือเข้าสู่ระบบเพื่อสร้างการ์ดของคุณ");
+        }
+      } else if (!data.is_public && !isOwner) {
+        showNotice("การ์ดนี้ยังไม่ได้เปิดให้ดูสาธารณะ");
+      } else {
+        row = data;
+        slug = data.slug || slug;
+        hideNotice();
+        renderCard(data);
+      }
+      $("cbfmEditBtn").classList.toggle("cbfm-hidden", !isOwner && !(user && !row));
+      $("cbfmLoginBtn").hidden = !!user;
+      $("cbfmLogoutBtn").hidden = !user;
+      updateShareUi();
+    }
+
+    function openEditor(isNew) {
+      const d = row || {
+        name: (user && user.displayName) || "",
+        slug: "",
+        handle: "",
+        role: "",
+        bio: "",
+        tags: [],
+        contact_email: (user && user.email) || "",
+        discord: "",
+        instagram: "",
+        is_public: false,
+      };
+      $("cbfmInName").value = d.name || "";
+      $("cbfmInSlug").value = d.slug || (user && user.email ? user.email.split("@")[0].toLowerCase().replace(/[^a-z0-9-]/g, "") : "");
+      $("cbfmInHandle").value = d.handle || "";
+      $("cbfmInRole").value = d.role || "";
+      $("cbfmInBio").value = d.bio || "";
+      $("cbfmInTags").value = (d.tags || []).join(", ");
+      $("cbfmInContact").value = d.contact_email || "";
+      $("cbfmInDiscord").value = d.discord || "";
+      $("cbfmInInsta").value = d.instagram || "";
+      $("cbfmInPublic").checked = !!d.is_public;
+      $("cbfmMsg").textContent = isNew ? "สร้างการ์ดใหม่ เลือกลิงก์การ์ดแล้วกดบันทึก" : "";
+      $("cbfmModal").classList.remove("cbfm-hidden");
+    }
+
+    async function saveCard() {
+      if (!user || !user.email) return;
+      const name = $("cbfmInName").value.trim();
+      const newSlug = $("cbfmInSlug").value.trim().toLowerCase();
+      if (!name) return ($("cbfmMsg").textContent = "กรุณาใส่ชื่อที่แสดง");
+      if (!SLUG_RE.test(newSlug)) return ($("cbfmMsg").textContent = "ลิงก์การ์ดต้องมี 3-40 ตัว ใช้ a-z 0-9 และ - เท่านั้น");
+      const payload = {
+        email: user.email.toLowerCase(),
+        slug: newSlug,
+        name,
+        handle: $("cbfmInHandle").value.trim(),
+        role: $("cbfmInRole").value.trim(),
+        bio: $("cbfmInBio").value.trim(),
+        tags: $("cbfmInTags").value.split(",").map((x) => x.trim()).filter(Boolean).slice(0, 12),
+        contact_email: $("cbfmInContact").value.trim(),
+        discord: $("cbfmInDiscord").value.trim(),
+        instagram: $("cbfmInInsta").value.trim(),
+        is_public: $("cbfmInPublic").checked,
+        avatar_url: (row && row.avatar_url) || user.photoURL || null,
+        updated_at: new Date().toISOString(),
+      };
+      $("cbfmSaveBtn").disabled = true;
+      const { error } = await sb.from("member_cards").upsert(payload, { onConflict: "email" });
+      $("cbfmSaveBtn").disabled = false;
+      if (error) {
+        const dup = error.code === "23505";
+        $("cbfmMsg").textContent = dup ? "ลิงก์นี้มีคนใช้แล้ว กรุณาเลือกลิงก์อื่น" : "บันทึกไม่สำเร็จ: " + (error.message || "");
+        return;
+      }
+      slug = newSlug;
+      history.replaceState(null, "", location.pathname + "?h=" + encodeURIComponent(slug));
+      $("cbfmModal").classList.add("cbfm-hidden");
+      await refresh();
+    }
+
+    $("cbfmLoginBtn").addEventListener("click", async () => {
+      try {
+        await signInWithPopup(fbAuth, new GoogleAuthProvider());
+      } catch (err) {
+        alert("เข้าสู่ระบบไม่สำเร็จ: " + (err.code || err.message));
+      }
+    });
+    $("cbfmLogoutBtn").addEventListener("click", () => signOut(fbAuth));
+    $("cbfmEditBtn").addEventListener("click", () => openEditor(false));
+    $("cbfmCancelBtn").addEventListener("click", () => $("cbfmModal").classList.add("cbfm-hidden"));
+    $("cbfmSaveBtn").addEventListener("click", saveCard);
+    $("cbfmShareBtn").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(shareUrl());
+        $("cbfmShareBtn").textContent = "คัดลอกแล้ว";
+        setTimeout(() => ($("cbfmShareBtn").textContent = "คัดลอกลิงก์การ์ด"), 1600);
+      } catch (err) {
+        alert(shareUrl());
+      }
+    });
+
+    const __avatarEl = document.querySelector('.avatar-img');
+    if (__avatarEl) __avatarEl.addEventListener('error', () => { __avatarEl.style.visibility = 'hidden'; });
+
+    onAuthStateChanged(fbAuth, (u) => {
+      user = u;
+      refresh();
+    });
   </script>
 </body>
 </html>
